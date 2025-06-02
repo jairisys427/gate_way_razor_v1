@@ -8,7 +8,7 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// SQLite/Turso client (or use sqlite3 if you prefer)
+// SQLite/Turso client
 const client = createClient({
   url: process.env.TURSO_DATABASE_URL,
   authToken: process.env.TURSO_AUTH_TOKEN,
@@ -101,20 +101,27 @@ app.post('/api/create-order', async (req, res) => {
 });
 
 // Save payment details
-app.post('/api/enroll', (req, res) => {
+app.post('/api/enroll', async (req, res) => {
     const { name, phone, email, razorpay_payment_id } = req.body;
 
     if (!name || !phone || !email || !razorpay_payment_id) {
         return res.status(400).json({ success: false, error: 'Missing required fields' });
     }
 
-    // TODO: In production, verify payment with Razorpay API here
-
-    // Simulate DB insert / enrollment
-    // For demo, always succeed
-    return res.json({ success: true, message: "Enrolled successfully!" });
+    // Save payment record in DB
+    try {
+        await client.execute({
+          sql: `
+            INSERT INTO payments (fullName, phone, email, paymentId, status, date)
+            VALUES (?, ?, ?, ?, ?, ?)
+          `,
+          args: [name, phone, email, razorpay_payment_id, 'success', Date.now()]
+        });
+        return res.json({ success: true, message: "Enrolled successfully!" });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: err.message });
+    }
 });
-
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
