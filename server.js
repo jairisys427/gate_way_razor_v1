@@ -7,7 +7,7 @@ const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
-const PORT = 3000;
+const PORT = 5000;
 
 // Initialize Turso client
 const client = createClient({
@@ -80,6 +80,12 @@ const sanitizeString = (str) => {
   if (typeof str !== 'string') return '';
   return str.trim().replace(/[^a-zA-Z0-9@._-]/g, '');
 };
+
+// Add this just before your other endpoints
+app.get('/', (req, res) => {
+  res.status(200).send('OK');
+});
+
 
 // GET endpoint to fetch pricing details
 app.get('/api/pricing', async (req, res) => {
