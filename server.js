@@ -102,25 +102,7 @@ app.post('/api/create-order', async (req, res) => {
 
 // Save payment details
 app.post('/api/enroll', async (req, res) => {
-    const { name, phone, email, razorpay_payment_id } = req.body;
-
-    if (!name || !phone || !email || !razorpay_payment_id) {
-        return res.status(400).json({ success: false, error: 'Missing required fields' });
-    }
-
-    // Save payment record in DB
-    try {
-        await client.execute({
-          sql: `
-            INSERT INTO payments (fullName, phone, email, paymentId, status, date)
-            VALUES (?, ?, ?, ?, ?, ?)
-          `,
-          args: [name, phone, email, razorpay_payment_id, 'success', Date.now()]
-        });
-        return res.json({ success: true, message: "Enrolled successfully!" });
-    } catch (err) {
-        return res.status(500).json({ success: false, error: err.message });
-    }
+      return res.json({ success: true, message: "Enrolled successfully!" });
 });
 
 app.listen(PORT, () => {
