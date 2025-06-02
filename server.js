@@ -71,16 +71,21 @@ app.get('/api/pricing', async (req, res) => {
 // Order creation
 app.post('/create_order', async (req, res) => {
   const { amount, currency, receipt } = req.body;
+  console.log('Order create request:', req.body);
   try {
+    if (!amount || !currency || !receipt) {
+      return res.status(400).json({ success: false, error: "Missing parameters" });
+    }
     const order = await razorpay.orders.create({
-      amount: amount, // in paise
-      currency: currency,
-      receipt: receipt,
+      amount: parseInt(amount), // Ensure integer
+      currency,
+      receipt,
       payment_capture: 1
     });
-    res.json({ id: order.id, status: order.status });
+    res.json({ success: true, order });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Razorpay error:', err);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
