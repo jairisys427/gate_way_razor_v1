@@ -98,24 +98,11 @@ app.post('/api/razorpay/order', async (req, res) => {
 });
 
 // Save payment details
-app.post('/api/payment', async (req, res) => {
-  try {
-    const { fullName, phone, email, paymentId, orderId, amount, status, date } = req.body;
-    // Basic validation
-    if (!fullName || !phone || !email || !orderId || !amount || !status || !date)
-      return res.status(400).json({ success: false, message: "Missing fields" });
-
-    // Insert payment record
-    await client.execute({
-      sql: 'INSERT INTO payments (fullName, phone, email, paymentId, orderId, amount, status, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      args: [fullName, phone, email, paymentId || '', orderId, amount, status, date]
-    });
-    res.json({ success: true });
-  } catch (e) {
-    console.error('Save payment error', e);
-    res.status(500).json({ success: false, message: e.message });
-  }
+app.post('/api/payment', (req, res) => {
+  console.log('Received payment:', req.body);
+  res.json({ success: true });
 });
+
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
