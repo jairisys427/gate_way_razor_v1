@@ -89,6 +89,34 @@ app.post('/create_order', async (req, res) => {
   }
 });
 
+
+app.get('/check_payment_status/:payment_id', async (req, res) => {
+  const paymentId = req.params.payment_id;
+  if (!paymentId) {
+    return res.status(400).json({ success: false, error: "Missing payment_id in URL" });
+  }
+  try {
+    const payment = await razorpay.payments.fetch(paymentId);
+    // payment.status can be 'created', 'authorized', 'captured', 'failed', 'refunded', etc.
+    // For most app usage, 'captured' means success, 'failed' means failure, others are pending.
+    let status = "pending";
+    if (payment.status === "captured") status = "success";
+    else if (payment.status === "failed") status = "failed";
+
+    res.json({
+      success: true,
+      payment_id: paymentId,
+      status: status,
+      raw_status: payment.status,
+      payment_details: payment
+    });
+  } catch (err) {
+    console.error("Error fetching payment:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
