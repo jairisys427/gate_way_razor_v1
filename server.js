@@ -2,65 +2,121 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const Razorpay = require('razorpay');
+const { createClient } = require('@libsql/client');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// Razorpay keys from .env or hardcoded for demo
+// SQLite/Turso client (or use sqlite3 if you prefer)
+const client = createClient({
+  url: process.env.TURSO_DATABASE_URL,
+  authToken: process.env.TURSO_AUTH_TOKEN,
+});
+
+// Razorpay client
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_Ds5xqQIv1RKQHb",
-  key_secret: process.env.RAZORPAY_KEY_SECRET || "YOUR_KEY_SECRET",
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
 app.use(cors());
 app.use(bodyParser.json());
 
-// Dummy pricing (could be from DB)
-let PRICING = { basePrice: 199.00, discountPercentage: 0 };
+// ---- DB INIT ----
+async function initDB() {
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      fullName TEXT,
+      phone TEXT,
+      email TEXT,
+      paymentId TEXT,
+      orderId TEXT,
+      amount TEXT,
+      status TEXT,
+      date INTEGER
+    )
+  `);
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS pricing (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      basePrice REAL NOT NULL,
+      discountPercentage REAL NOT NULL,
+      lastUpdated INTEGER NOT NULL
+    )
+  `);
+  const res = await client.execute('SELECT COUNT(*) as count FROM pricing');
+  if (res.rows[0].count === 0) {
+    await client.execute({
+      sql: 'INSERT INTO pricing (basePrice, discountPercentage, lastUpdated) VALUES (?, ?, ?)',
+      args: [199.00, 0.0, Date.now()],
+    });
+  }
+  console.log('DB Initialized');
+}
+initDB().catch(console.error);
 
-// Health check
-app.get('/', (req, res) => res.send('OK'));
+// ---- API ----
 
-// Get pricing
-app.get('/api/pricing', (req, res) => {
-  const finalPrice = (PRICING.basePrice * (1 - PRICING.discountPercentage / 100)).toFixed(2);
-  res.json({
-    success: true,
-    data: {
-      basePrice: PRICING.basePrice.toFixed(2),
-      discountPercentage: PRICING.discountPercentage,
-      finalPrice,
-    },
-  });
+app.get('/', (req, res) => {
+  res.send('OK');
 });
 
-// Razorpay order creation
-app.post('/api/razorpay/order', async (req, res) => {
+// Fetch pricing
+app.get('/api/pricing', async (req, res) => {
   try {
-    const { amount, currency } = req.body;
-    if (!amount || !currency) return res.status(400).json({ success: false, message: "Missing amount/currency." });
-
-    const order = await razorpay.orders.create({
-      amount: parseInt(amount), // paise
-      currency,
-      receipt: 'rcpt_' + Date.now(),
-    });
-    res.json({ success: true, orderId: order.id });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: "Order create failed.", error: err.message });
+    const result = await client.execute('SELECT * FROM pricing LIMIT 1');
+    if (!result.rows.length) return res.json({ success: false, message: "No pricing set" });
+    const { basePrice, discountPercentage } = result.rows[0];
+    const finalPrice = (basePrice * (1 - discountPercentage / 100)).toFixed(2);
+    res.json({ success: true, data: {
+      basePrice: basePrice.toFixed(2),
+      discountPercentage: discountPercentage.toFixed(1),
+      finalPrice
+    }});
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
   }
 });
 
-// Payment log endpoint (for demo: always succeed)
-app.post('/api/payment', (req, res) => {
-  console.log('Payment save request:', req.body); // Inspect in your logs!
-  // In production, save in DB here and validate the payment.
-  res.json({ success: true });
+// Create Razorpay order
+app.post('/api/razorpay/order', async (req, res) => {
+  try {
+    const { amount, currency } = req.body;
+    if (!amount || !currency) return res.status(400).json({ success: false, message: 'Missing amount or currency' });
+    const order = await razorpay.orders.create({
+      amount: parseInt(amount), // paise
+      currency,
+      receipt: 'receipt_' + Date.now(),
+    });
+    return res.json({ success: true, orderId: order.id });
+  } catch (e) {
+    console.error('Razorpay order error', e);
+    res.status(500).json({ success: false, message: e.message });
+  }
 });
 
-// Start server
+// Save payment details
+app.post('/api/payment', async (req, res) => {
+  try {
+    const { fullName, phone, email, paymentId, orderId, amount, status, date } = req.body;
+    // Basic validation
+    if (!fullName || !phone || !email || !orderId || !amount || !status || !date)
+      return res.status(400).json({ success: false, message: "Missing fields" });
+
+    // Insert payment record
+    await client.execute({
+      sql: 'INSERT INTO payments (fullName, phone, email, paymentId, orderId, amount, status, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      args: [fullName, phone, email, paymentId || '', orderId, amount, status, date]
+    });
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Save payment error', e);
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
