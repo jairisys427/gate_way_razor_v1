@@ -7,7 +7,7 @@ const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 8080; // Modified to use env PORT or default 8080
 
 // Initialize Turso client
 const client = createClient({
@@ -85,7 +85,6 @@ const sanitizeString = (str) => {
 app.get('/', (req, res) => {
   res.status(200).send('OK');
 });
-
 
 // GET endpoint to fetch pricing details
 app.get('/api/pricing', async (req, res) => {
