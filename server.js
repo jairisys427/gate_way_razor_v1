@@ -98,9 +98,18 @@ app.post('/api/razorpay/order', async (req, res) => {
 });
 
 // Save payment details
-app.post('/api/payment', (req, res) => {
-  console.log('Received payment:', req.body);
-  res.json({ success: true });
+app.post('/api/enroll', (req, res) => {
+    const { name, phone, email, razorpay_payment_id } = req.body;
+
+    if (!name || !phone || !email || !razorpay_payment_id) {
+        return res.status(400).json({ success: false, error: 'Missing required fields' });
+    }
+
+    // TODO: In production, verify payment with Razorpay API here
+
+    // Simulate DB insert / enrollment
+    // For demo, always succeed
+    return res.json({ success: true, message: "Enrolled successfully!" });
 });
 
 
