@@ -81,20 +81,23 @@ app.get('/api/pricing', async (req, res) => {
 });
 
 // Create Razorpay order
-app.post('/api/razorpay/order', async (req, res) => {
-  try {
-    const { amount, currency } = req.body;
-    if (!amount || !currency) return res.status(400).json({ success: false, message: 'Missing amount or currency' });
-    const order = await razorpay.orders.create({
-      amount: parseInt(amount), // paise
-      currency,
-      receipt: 'receipt_' + Date.now(),
-    });
-    return res.json({ success: true, orderId: order.id });
-  } catch (e) {
-    console.error('Razorpay order error', e);
-    res.status(500).json({ success: false, message: e.message });
-  }
+app.post('/api/create-order', async (req, res) => {
+    const { amount } = req.body; // amount in INR
+    if (!amount) return res.status(400).json({ success: false, error: 'Amount required' });
+
+    const options = {
+        amount: Math.round(parseFloat(amount) * 100), // amount in paise!
+        currency: 'INR',
+        receipt: 'receipt_order_' + Math.floor(Math.random()*1000000),
+        payment_capture: 1
+    };
+
+    try {
+        const order = await razorpay.orders.create(options);
+        res.json({ success: true, order });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
 });
 
 // Save payment details
