@@ -25,19 +25,7 @@ app.use(bodyParser.json());
 
 // ---- DB INIT ----
 async function initDB() {
-  await client.execute(`
-    CREATE TABLE IF NOT EXISTS payments (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      fullName TEXT,
-      phone TEXT,
-      email TEXT,
-      paymentId TEXT,
-      orderId TEXT,
-      amount TEXT,
-      status TEXT,
-      date INTEGER
-    )
-  `);
+ 
   await client.execute(`
     CREATE TABLE IF NOT EXISTS pricing (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -80,29 +68,20 @@ app.get('/api/pricing', async (req, res) => {
   }
 });
 
-// Create Razorpay order
-app.post('/api/create-order', async (req, res) => {
-    const { amount } = req.body; // amount in INR
-    if (!amount) return res.status(400).json({ success: false, error: 'Amount required' });
-
-    const options = {
-        amount: Math.round(parseFloat(amount) * 100), // amount in paise!
-        currency: 'INR',
-        receipt: 'receipt_order_' + Math.floor(Math.random()*1000000),
-        payment_capture: 1
-    };
-
-    try {
-        const order = await razorpay.orders.create(options);
-        res.json({ success: true, order });
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-// Save payment details
-app.post('/api/enroll', async (req, res) => {
-      return res.json({ success: true, message: "Enrolled successfully!" });
+// Order creation
+app.post('/create_order', async (req, res) => {
+  const { amount, currency, receipt } = req.body;
+  try {
+    const order = await razorpay.orders.create({
+      amount: amount, // in paise
+      currency: currency,
+      receipt: receipt,
+      payment_capture: 1
+    });
+    res.json({ id: order.id, status: order.status });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.listen(PORT, () => {
