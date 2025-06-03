@@ -21,19 +21,7 @@ const razorpay = new Razorpay({
 });
 
 // updated
-const corsOptions = {
-  origin: [
-    'https://jairisys.tech',
-    'https://lohith-2811.github.io',
-  ],
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: false,
-  optionsSuccessStatus: 204,
-};
-
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+app.use(cors());
 app.use(bodyParser.json());
 
 // ---- DB INIT ----
