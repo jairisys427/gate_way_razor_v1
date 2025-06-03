@@ -20,7 +20,21 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-app.use(cors());
+// updated
+const corsOptions = {
+  origin: [
+    'https://jairisys.tech',
+    'https://lohith-2811.github.io',
+    'http://localhost:3000',
+  ],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false,
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(bodyParser.json());
 
 // ---- DB INIT ----
