@@ -25,7 +25,6 @@ const corsOptions = {
   origin: [
     'https://jairisys.tech',
     'https://lohith-2811.github.io',
-    'http://localhost:3000',
   ],
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
