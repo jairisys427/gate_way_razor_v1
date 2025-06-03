@@ -117,6 +117,39 @@ app.get('/check_payment_status/:payment_id', async (req, res) => {
 });
 
 
+// Fetch user transactions from Razorpay
+app.get('/api/user_transactions', async (req, res) => {
+  const userEmail = req.query.email;
+  if (!userEmail) {
+    return res.status(400).json({ success: false, error: "Missing email parameter" });
+  }
+  try {
+    // Fetch payments with notes.email matching userEmail
+    const payments = await razorpay.payments.all({
+      'notes.email': userEmail
+    });
+    const transactions = payments.items.map(payment => ({
+      payment_id: payment.id,
+      user_email: userEmail,
+      amount: payment.amount / 100, // Convert paise to rupees
+      status: payment.status === "captured" ? "success" :
+              payment.status === "failed" ? "failed" :
+              payment.status === "refunded" ? "refunded" : "pending",
+      order_id: payment.order_id,
+      created_at: payment.created_at
+    }));
+    res.json({
+      success: true,
+      data: transactions
+    });
+  } catch (e) {
+    console.error("Error fetching transactions:", e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
