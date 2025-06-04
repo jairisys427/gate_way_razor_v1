@@ -21,13 +21,11 @@ const razorpay = new Razorpay({
 });
 
 // updated
-app.use(
-  cors({
-    origin: ['https://lohith-2811.github.io', 'https://jairisys.tech/'],
-    methods: ['GET', 'POST'],
-    credentials: true,
-  })
-);
+app.use(cors({
+  origin: 'https://jairisys.tech',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
+}));
 app.use(bodyParser.json());
 
 // ---- DB INIT ----
